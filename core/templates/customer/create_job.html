@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+{% load bootstrap4 %}
+
+{% block head %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    .map-container {
+      height: 300px; /* Adjust height as needed */
+      border: 1px solid #ccc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <!-- LEFT SIDE -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          JOB SUMMARY
+        </div>
+        <div class="card-body">
+          {% if not job %}
+            <p>A summary of your job information will appear here</p>
+          {% else %}
+            {% if step > 1 %}
+              <h4>{{ job.name }}</h4>
+              <span>{{ job.quantity }} Item</span><br />
+              <span>{{ job.get_size_display }} Job</span>
+            {% endif %}
+
+            {% if step > 2 %}
+              <hr />
+              <p class="text-secondary"><small><b>PICKUP</b></small></p>
+              <h4>{{ job.pickup_name }}</h4>
+              <span>{{ job.pickup_address }}</span><br />
+            {% endif %}
+
+            {% if step > 3 %}
+              <hr />
+              <p class="text-secondary"><small><b>DELIVERY</b></small></p>
+              <h4>{{ job.delivery_name }}</h4>
+              <span>{{ job.delivery_address }}</span><br />
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDE -->
+    <div class="col-lg-8">
+
+      <!-- Step tabs -->
+      <div class="card mb-5">
+        <div class="card-body">
+          <ul class="nav nav-pills nav-justified align-items-center mb-3" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+              <a class="{% if step == 1 %}active{% endif %}" id="pills-info-tab" data-toggle="pill" href="#pills-info"
+                role="tab" aria-controls="pills-info" aria-selected="true">Item Info</a>
+            </li>
+            <i class="fas fa-chevron-right"></i>
+            <li class="nav-item" role="presentation">
+              <a class="{% if step == 2 %}active{% endif %}" id="pills-pickup-tab" data-toggle="pill"
+                href="#pills-pickup" role="tab" aria-controls="pills-pickup" aria-selected="false">Pickup</a>
+            </li>
+            <i class="fas fa-chevron-right"></i>
+            <li class="nav-item" role="presentation">
+              <a class="{% if step == 3 %}active{% endif %}" id="pills-delivery-tab" data-toggle="pill"
+                href="#pills-delivery" role="tab" aria-controls="pills-delivery" aria-selected="false">Delivery</a>
+            </li>
+            <i class="fas fa-chevron-right"></i>
+            <li class="nav-item" role="presentation">
+              <a class="{% if step == 4 %}active{% endif %}" id="pills-payment-tab" data-toggle="pill"
+                href="#pills-payment" role="tab" aria-controls="pills-payment" aria-selected="false">Payment</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Step forms -->
+      <b>CREATE A JOB</b>
+      <div class="tab-content" id="pills-tabContent">
+
+        <!-- Step 1 -->
+        <div class="tab-pane fade {% if step == 1 %}show active{% endif %}" id="pills-info" role="tabpanel"
+          aria-labelledby="pills-info-tab">
+          <h1>Item Info</h1>
+
+          <form method="POST" enctype="multipart/form-data">
+            <b class="text-secondary">Item Information</b><br />
+            <div class="card bg-white mt-2 mb-5">
+              <div class="card-body">
+                {% csrf_token %}
+                {% bootstrap_form step1_form %}
+              </div>
+            </div>
+            <input type="hidden" name="step" value="1">
+            <button type="submit" class="btn btn-warning">Save & Continue</button>
+          </form>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="tab-pane fade {% if step == 2 %}show active{% endif %}" id="pills-pickup" role="tabpanel"
+          aria-labelledby="pills-pickup-tab">
+          <h1>Pickup</h1>
+
+          <form method="POST" enctype="multipart/form-data">
+            <b class="text-secondary">Pickup Information</b><br />
+            <div class="card bg-white mt-2 mb-5">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-lg-8">
+                    {% csrf_token %}
+                    {% bootstrap_form step2_form exclude='pickup_lat, pickup_lng' %}
+                    <input hidden id="pickup_lat" name="pickup_lat" value="{{ job.pickup_lat }}" />
+                    <input hidden id="pickup_lng" name="pickup_lng" value="{{ job.pickup_lng }}">
+                  </div>
+                  <div class="col-lg-4">
+                    <div id="pickup-map" class="map-container"></div>
+                    <div id="pickup-infowindow-content">
+                      <img src="" width="16" height="16" id="pickup-place-icon" />
+                      <span id="pickup-place-name" class="title"></span><br />
+                      <span id="pickup-place-address"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" name="step" value="2">
+            <button type="button" class="btn btn-outline-warning"
+              onclick="$('#pills-info-tab').tab('show');">Back</button>
+            <button type="submit" class="btn btn-warning">Save & Continue</button>
+          </form>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="tab-pane fade {% if step == 3 %}show active{% endif %}" id="pills-delivery" role="tabpanel"
+          aria-labelledby="pills-delivery-tab">
+          <h1>Delivery</h1>
+
+          <form method="POST" enctype="multipart/form-data">
+            <b class="text-secondary">Delivery Information</b><br />
+            <div class="card bg-white mt-2 mb-5">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-lg-8">
+                    {% csrf_token %}
+                    {% bootstrap_form step3_form exclude='delivery_lat, delivery_lng' %}
+                    <input hidden id="delivery_lat" name="delivery_lat" value="{{ job.delivery_lat }}" />
+                    <input hidden id="delivery_lng" name="delivery_lng" value="{{ job.delivery_lng }}">
+                  </div>
+                  <div class="col-lg-4">
+                    <div id="delivery-map" class="map-container"></div>
+                    <div id="delivery-infowindow-content">
+                      <img src="" width="16" height="16" id="delivery-place-icon" />
+                      <span id="delivery-place-name" class="title"></span><br />
+                      <span id="delivery-place-address"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" name="step" value="3">
+            <button type="button" class="btn btn-outline-warning"
+              onclick="$('#pills-pickup-tab').tab('show');">Back</button>
+            <button type="submit" class="btn btn-warning">Save & Continue</button>
+          </form>
+        </div>
+
+        <!-- Step 4: Payment -->
+        <div class="tab-pane fade {% if step == 4 %}show active{% endif %}" id="pills-payment" role="tabpanel"
+          aria-labelledby="pills-payment-tab">
+          <h1>Payment</h1>
+
+          <form method="POST">
+            <b class="text-secondary">Payment Method</b>
+            <div class="card bg-white mt-2 mb-5">
+              <div class="card-body">
+                {% csrf_token %}
+                <div class="form-group">
+                  <label>Amount to Collect (Cash on Delivery)</label>
+                  <input type="text" class="form-control" name="amount_to_collect" required>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" name="step" value="4">
+            <button type="button" class="btn btn-outline-warning" onclick="$('#pills-delivery-tab').tab('show');">Back</button>
+            <button type="submit" class="btn btn-warning">Create Job</button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- JavaScript Section -->
+{% block scripts %}
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var pickupMap = L.map('pickup-map').setView([{{ job.pickup_lat }}, {{ job.pickup_lng }}], 13);
+    var deliveryMap = L.map('delivery-map').setView([{{ job.delivery_lat }}, {{ job.delivery_lng }}], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    }).addTo(pickupMap);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    }).addTo(deliveryMap);
+
+    // Add markers to maps
+    var pickupMarker = L.marker([{{ job.pickup_lat }}, {{ job.pickup_lng }}], { draggable: true })
+      .addTo(pickupMap)
+      .bindPopup("Pickup Location")
+      .openPopup();
+
+    var deliveryMarker = L.marker([{{ job.delivery_lat }}, {{ job.delivery_lng }}], { draggable: true })
+      .addTo(deliveryMap)
+      .bindPopup("Delivery Location")
+      .openPopup();
+
+    // Initialize routing control
+    var pickupRoutingControl = L.Routing.control({
+      waypoints: [
+        L.latLng({{ job.pickup_lat }}, {{ job.pickup_lng }}),
+        L.latLng({{ job.delivery_lat }}, {{ job.delivery_lng }})
+      ],
+      routeWhileDragging: true,
+      draggableWaypoints: false,
+      createMarker: function () { return null; }
+    }).addTo(pickupMap);
+
+    var deliveryRoutingControl = L.Routing.control({
+      waypoints: [
+        L.latLng({{ job.delivery_lat }}, {{ job.delivery_lng }}),
+        L.latLng({{ job.pickup_lat }}, {{ job.pickup_lng }})
+      ],
+      routeWhileDragging: true,
+      draggableWaypoints: false,
+      createMarker: function () { return null; }
+    }).addTo(deliveryMap);
+  });
+</script>
+{% endblock %}
+{% endblock %}

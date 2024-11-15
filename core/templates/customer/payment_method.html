@@ -1,0 +1,68 @@
+{% extends 'customer/base.html' %}
+{% load bootstrap4 %}
+
+{% block head %}
+<style>
+  .StripeElement {
+    height: 40px;
+    padding: 10px 12px;
+    width: 100%;
+    color: #32325d;
+    background-color: white;
+    /* border: 1px solid transparent; */
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+
+    /* box-shadow: 0 1px 3px 0 #e6ebf1;
+    -webkit-transition: box-shadow 150ms ease;
+    transition: box-shadow 150ms ease; */
+  }
+
+  .StripeElement--focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, .25);
+  }
+
+  .StripeElement--invalid {
+    border-color: #fa755a;
+  }
+
+  .StripeElement--webkit-autofill {
+    background-color: #fefde5 !important;
+  }
+</style>
+{% endblock %}
+
+{% block main %}
+
+{% if not is_cash_on_delivery %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+  Let's add your preferred payment method!
+  <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+{% endif %}
+
+<b class="text-secondary">Payment Method</b>
+
+<div class="card bg-white mt-2 mb-5">
+  <div class="card-body">
+
+    {% if is_cash_on_delivery %}
+    <div id="cash-on-delivery" class="input-group">
+      <p class="form-control" disabled>Cash on Delivery</p>
+    </div>
+
+    {% else %}
+    <form method="POST">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-warning mt-3">Use Cash on Delivery</button>
+    </form>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}
+
